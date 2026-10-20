@@ -1,3 +1,4 @@
+<meta name="google-site-verification" content="KQodUwm-M-uQwoexXnecb7KRN7NvjkdzZQHU7G_V1is" />
 import streamlit as st
 import math
 import random
