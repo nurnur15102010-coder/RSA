@@ -209,16 +209,20 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 with tab1:
-    st.header("🔒 Мәтінді ортақ құпия кілт арқылы шифрлау")
-    st.write("Құпия сан ашық арнамен жіберілмейді — ортақ кілт қалдықтар арқылы есептеледі.")
+    st.header("🔒 Жіберуші тарап (Алиса): мәтінді шифрлау")
+    st.info(
+        "**Логикасы:** Ешкім өз құпия санын жібермейді! Сіз тек **өзіңіздің құпия саныңызды (`a`)** "
+        "және алушының ашық арнамен жіберген **ашық қалдығын (`B`)** енгізесіз. "
+        "Ортақ құпия кілт $K = B^a \\bmod p$ автоматты есептеледі."
+    )
 
     col1, col2 = st.columns(2)
     with col1:
-        p_enc = st.number_input("Жай модуль (p):", min_value=10007, value=104729, step=2, key="p_enc")
-        g_enc = st.number_input("Негіз (g):", min_value=2, value=5, step=1, key="g_enc")
+        p_enc = st.number_input("Ортақ жай модуль (p):", min_value=10007, value=104729, step=2, key="p_enc")
+        g_enc = st.number_input("Ортақ негіз (g):", min_value=2, value=5, step=1, key="g_enc")
     with col2:
-        secret_a = st.number_input("Сіздің құпия саныңыз (a):", min_value=2, value=123, step=1, key="sec_a")
-        other_pub_b = st.number_input("2-адамның ашық қалдығы (B):", min_value=1, value=456, step=1, key="pub_b")
+        secret_a = st.number_input("Сіздің құпия саныңыз a (тек сіз білесіз, ешкімге жіберілмейді):", min_value=2, value=123, step=1, key="sec_a")
+        other_pub_b = st.number_input("Алушының ашық қалдығы B (ашық арнадан алынған):", min_value=1, value=79796, step=1, key="pub_b")
 
     input_text = st.text_area("Шифрланатын мәтінді енгізіңіз:", value="Hello RSA")
 
@@ -230,21 +234,30 @@ with tab1:
             encrypted_numbers = encrypt_with_shared_key(input_text, shared_key_a, p_enc)
             st.subheader("Нәтиже (Шифрланған сандар массиві):")
             st.code(str(encrypted_numbers), language="python")
-            st.info(f"💡 2-адамға жіберуге болатын ашық қалдығыңыз: A = {my_pub_a} (құпия 'a' саны сізде қалады).")
+            st.success(
+                f"📤 **Ашық арнамен алушыға мына екеуін ғана жіберіңіз:**\n"
+                f"1. Жоғарыдағы шифрланған сандар массивін;\n"
+                f"2. Өзіңіздің ашық қалдығыңызды: **`A = {my_pub_a}`**.\n\n"
+                f"🔒 Сіздің құпия саныңыз (`a = {int(secret_a)}`) **ешқайда жіберілмейді** — тек өзіңізде қалады!"
+            )
 
 with tab2:
-    st.header("🔓 Мәтінді ортақ құпия кілт арқылы дешифрлау")
-    st.write("2-адам өз құпия саны мен 1-адамның ашық қалдығы арқылы ортақ кілтті тауып, мәтінді ашады.")
+    st.header("🔓 Алушы тарап (Боб): мәтінді дешифрлау")
+    st.info(
+        "**Логикасы:** Сізге жіберушінің құпия санын (`a`) білудің мүлде қажеті жоқ! "
+        "Сіз тек **өзіңіздің құпия саныңызды (`b`)** (оны ешкімге жібермегенсіз) және "
+        "жіберушінің ашық қалдығын (**`A`**) енгізесіз. Сіздің құрылғыңызда сол ортақ кілт $K = A^b \\bmod p$ есептеледі."
+    )
 
     col1, col2 = st.columns(2)
     with col1:
-        p_dec = st.number_input("Жай модуль (p):", min_value=10007, value=104729, step=2, key="p_dec")
-        g_dec = st.number_input("Негіз (g):", min_value=2, value=5, step=1, key="g_dec")
+        p_dec = st.number_input("Ортақ жай модуль (p):", min_value=10007, value=104729, step=2, key="p_dec")
+        g_dec = st.number_input("Ортақ негіз (g):", min_value=2, value=5, step=1, key="g_dec")
     with col2:
-        secret_b = st.number_input("2-адамның құпия саны (b):", min_value=2, value=456, step=1, key="sec_b")
-        other_pub_a = st.number_input("1-адамның ашық қалдығы (A):", min_value=1, value=789, step=1, key="pub_a")
+        secret_b = st.number_input("Сіздің жеке құпия саныңыз b (тек сізде сақталады):", min_value=2, value=456, step=1, key="sec_b")
+        other_pub_a = st.number_input("Жіберушінің ашық қалдығы A (ашық арнадан келген):", min_value=1, value=25732, step=1, key="pub_a")
 
-    cipher_input = st.text_input("Зашифрланған сандар массиві:", value="[3000, 1234, 567]")
+    cipher_input = st.text_input("Ашық арнадан келген шифрланған сандар массиві:", value="[48469, 43451, 31559, 31559, 27800, 99162, 74736, 73486, 86599]")
 
     if st.button("Дешифрлау", key="btn_decrypt"):
         if not is_prime(int(p_dec)):
@@ -254,16 +267,17 @@ with tab2:
                 clean_str = cipher_input.replace("[", "").replace("]", "").strip()
                 if clean_str:
                     cipher_list = [int(x.strip()) for x in clean_str.split(",") if x.strip()]
-                    _, shared_key_b = compute_shared_key(g_dec, secret_b, other_pub_a, p_dec)
+                    my_pub_b, shared_key_b = compute_shared_key(g_dec, secret_b, other_pub_a, p_dec)
                     decrypted_text = decrypt_with_shared_key(cipher_list, shared_key_b, p_dec)
                     st.balloons()
-                    st.success("Хабарлама сәтті дешифрланды!")
+                    st.success("Хабарлама сәтті дешифрланды! (Құпия сандар ашық арнамен берілген жоқ)")
                     st.subheader("Түпнұсқа мәтін:")
                     st.success(f"**{decrypted_text}**")
+                    st.caption(f"Анықтама: сіздің ашық қалдығыңыз B = {my_pub_b} (жіберушіге осы мән берілген).")
                 else:
                     st.error("Массив бос!")
             except Exception as e:
-                st.error(f"Формат қатесі: {e}")
+                st.error(f"Дешифрлау қатесі (ашық қалдық A немесе жеке құпия сан b сәйкес келмейді): {e}")
 
 with tab3:
     col1, col2 = st.columns(2)
@@ -323,7 +337,7 @@ with tab4:
 
 with tab5:
     st.header("📐 Қалдықты есептеу (Модульдік арифметика)")
-    st.write("Мұнда дәрежелеу қалдығын $(g^x \\bmod p)$ немесе жай бөлу қалдығын $(a \\bmod p)$ оңай есептеуге болады.")
+    st.write("Мұнда дәрежелеу қалдығын $(g^x \\bmod p)$ немесе жай бөлу қалдығын $(a \\bmod p)$ қадамдап есептеуге болады.")
 
     calc_mode = st.radio(
         "Есептеу түрін таңдаңыз:",
@@ -341,9 +355,35 @@ with tab5:
             p_val = st.number_input("Модуль (p):", min_value=1, value=104729, step=1, key="rem_p")
 
         if st.button("Қалдықты есептеу", key="btn_pow_mod"):
-            remainder = pow(int(g_val), int(x_val), int(p_val))
-            st.success(f"Нәтиже (қалдық): **({int(g_val)}^{int(x_val)}) mod {int(p_val)} = {remainder}**")
-            st.caption(f"Python формуласы: `pow({int(g_val)}, {int(x_val)}, {int(p_val)})` -> `{remainder}`")
+            g_i, x_i, p_i = int(g_val), int(x_val), int(p_val)
+            remainder = pow(g_i, x_i, p_i)
+            st.success(f"Нәтиже (қалдық): **({g_i}^{x_i}) mod {p_i} = {remainder}**")
+
+            steps = []
+            cur = 1
+            base = g_i % p_i
+            exp = x_i
+            step_num = 1
+            while exp > 0 and step_num <= 25:
+                if exp % 2 == 1:
+                    prev_cur = cur
+                    cur = (cur * base) % p_i
+                    steps.append(f"{step_num}-қадам (дәреже тақ): ({prev_cur} × {base}) mod {p_i} = {cur}")
+                else:
+                    steps.append(f"{step_num}-қадам (дәреже жұп): ағымдағы мән = {cur}")
+                exp //= 2
+                if exp > 0:
+                    prev_base = base
+                    base = (base * base) % p_i
+                    steps.append(f"   ↳ негізді квадраттау: ({prev_base}²) mod {p_i} = {base}")
+                step_num += 1
+
+            st.subheader("Қалай есептелді (қадамдар):")
+            for s in steps:
+                st.write(s)
+            if exp > 0:
+                st.caption("Қалған қадамдар дәл осы ережемен жалғасады...")
+            st.caption(f"Қысқа формула: `pow({g_i}, {x_i}, {p_i})` -> `{remainder}`")
 
     else:
         col1, col2 = st.columns(2)
@@ -353,7 +393,11 @@ with tab5:
             m_val = st.number_input("Бөлгіш / модуль (m):", min_value=1, value=23, step=1, key="rem_m")
 
         if st.button("Қалдықты табу", key="btn_simple_mod"):
-            quotient = int(a_val) // int(m_val)
-            remainder = int(a_val) % int(m_val)
-            st.success(f"Нәтиже (қалдық): **{int(a_val)} mod {int(m_val)} = {remainder}**")
-            st.info(f"Тексеру: `{int(a_val)} = {quotient} × {int(m_val)} + {remainder}` (бүтін бөлігі: `{quotient}`, қалдық: `{remainder}`)")
+            a_i, m_i = int(a_val), int(m_val)
+            quotient = a_i // m_i
+            remainder = a_i % m_i
+            st.success(f"Нәтиже (қалдық): **{a_i} mod {m_i} = {remainder}**")
+            st.subheader("Қалай есептелді:")
+            st.write(f"1. {a_i} санын {m_i}-ге бөлгендегі толық бөлінді: **{quotient}**")
+            st.write(f"2. Бөлінген бөліктің мәні: {quotient} × {m_i} = {quotient * m_i}")
+            st.write(f"3. Қалдық: {a_i} − {quotient * m_i} = **{remainder}**")
