@@ -45,6 +45,37 @@ def modular_inverse(e: int, phi: int) -> int:
         d_old += phi
     return d_old
 
+# --- Құпия кілт алмасу және ортақ кілтпен шифрлау/дешифрлау ---
+def compute_shared_key(g_base: int, secret_self: int, other_public: int, p_mod: int) -> tuple[int, int]:
+    """Өз ашық қалдығын (A немесе B) және есептелген ортақ құпия кілтті қайтарады."""
+    my_public = pow(int(g_base), int(secret_self), int(p_mod))
+    shared_key = pow(int(other_public), int(secret_self), int(p_mod))
+    return my_public, shared_key
+
+def _get_cipher_params(shared_key: int, p_mod: int) -> tuple[int, int]:
+    mult = (shared_key % 997) + 11
+    while math.gcd(mult, p_mod) != 1:
+        mult += 2
+    shift = (shared_key % 4093) + 17
+    return mult, shift
+
+def encrypt_with_shared_key(text: str, shared_key: int, p_mod: int) -> list[int]:
+    """Ортақ кілт пен модуль арқылы мәтінді сандар тізбегіне шифрлау."""
+    mult, shift = _get_cipher_params(shared_key, p_mod)
+    return [((ord(ch) + shift) * mult + idx) % p_mod for idx, ch in enumerate(text)]
+
+def decrypt_with_shared_key(cipher_list: list[int], shared_key: int, p_mod: int) -> str:
+    """Есептелген ортақ кілт арқылы сандар тізбегін кері дешифрлау."""
+    mult, shift = _get_cipher_params(shared_key, p_mod)
+    inv_mult = modular_inverse(mult, p_mod)
+    if inv_mult is None:
+        raise ValueError("Кері модульдік элемент табылмады (жай модульді тексеріңіз).")
+    chars = []
+    for idx, c in enumerate(cipher_list):
+        code_point = (((c - idx) % p_mod) * inv_mult - shift) % p_mod
+        chars.append(chr(code_point))
+    return "".join(chars)
+
 # --- Жайлық тесттерінің алгоритмдері ---
 def fermat_test(n: int, k: int = 5) -> bool:
     if n <= 1: return False
@@ -172,35 +203,57 @@ else:
 tab1, tab2, tab3, tab4 = st.tabs(["🔒 Шифрлау", "🔓 Дешифрлау", "📚 Теория & Пароль", "🧮 Жай санды тестілеу"])
 
 with tab1:
-    st.header("🔒 Мәтінді шифрлау")
-    st.write("Енгізілген ашық мәтін ашық кілт көмегімен сан тізбегіне айналдырылады.")
+    st.header("🔒 Мәтінді ортақ құпия кілт арқылы шифрлау")
+    st.write("Құпия сан ашық арнамен жіберілмейді — ортақ кілт қалдықтар арқылы есептеледі.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        p_enc = st.number_input("Жай модуль (p):", min_value=10007, value=104729, step=2, key="p_enc")
+        g_enc = st.number_input("Негіз (g):", min_value=2, value=5, step=1, key="g_enc")
+    with col2:
+        secret_a = st.number_input("Сіздің құпия саныңыз (a):", min_value=2, value=123, step=1, key="sec_a")
+        other_pub_b = st.number_input("2-адамның ашық қалдығы (B):", min_value=1, value=456, step=1, key="pub_b")
+
     input_text = st.text_area("Шифрланатын мәтінді енгізіңіз:", value="Hello RSA")
+
     if st.button("Шифрлау", key="btn_encrypt"):
-        if e_val is None or n_val is None:
-            st.error("Кілттер дұрыс орнатылмаған!")
+        if not is_prime(int(p_enc)):
+            st.error("Модуль (p) жай сан болуы тиіс!")
         else:
-            encrypted_numbers = [pow(ord(char), e_val, n_val) for char in input_text]
+            my_pub_a, shared_key_a = compute_shared_key(g_enc, secret_a, other_pub_b, p_enc)
+            encrypted_numbers = encrypt_with_shared_key(input_text, shared_key_a, p_enc)
             st.subheader("Нәтиже (Шифрланған сандар массиві):")
             st.code(str(encrypted_numbers), language="python")
-            st.info(f"💡 Дешифрлау үшін қажетті кілттер: d = {d_val}, n = {n_val}")
+            st.info(f"💡 2-адамға жіберуге болатын ашық қалдығыңыз: A = {my_pub_a} (құпия 'a' саны сізде қалады).")
 
 with tab2:
-    st.header("🔓 Мәтінді дешифрлау")
-    st.write("Шифрланған сандар массивін жабық кілт арқылы қайтару.")
+    st.header("🔓 Мәтінді ортақ құпия кілт арқылы дешифрлау")
+    st.write("2-адам өз құпия саны мен 1-адамның ашық қалдығы арқылы ортақ кілтті тауып, мәтінді ашады.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        p_dec = st.number_input("Жай модуль (p):", min_value=10007, value=104729, step=2, key="p_dec")
+        g_dec = st.number_input("Негіз (g):", min_value=2, value=5, step=1, key="g_dec")
+    with col2:
+        secret_b = st.number_input("2-адамның құпия саны (b):", min_value=2, value=456, step=1, key="sec_b")
+        other_pub_a = st.number_input("1-адамның ашық қалдығы (A):", min_value=1, value=789, step=1, key="pub_a")
+
     cipher_input = st.text_input("Зашифрланған сандар массиві:", value="[3000, 1234, 567]")
+
     if st.button("Дешифрлау", key="btn_decrypt"):
-        if d_val is None or n_val is None:
-            st.error("Кілттер дұрыс орнатылмаған!")
+        if not is_prime(int(p_dec)):
+            st.error("Модуль (p) жай сан болуы тиіс!")
         else:
             try:
                 clean_str = cipher_input.replace("[", "").replace("]", "").strip()
                 if clean_str:
                     cipher_list = [int(x.strip()) for x in clean_str.split(",") if x.strip()]
-                    decrypted_chars = [chr(pow(c, d_val, n_val)) for c in cipher_list]
+                    _, shared_key_b = compute_shared_key(g_dec, secret_b, other_pub_a, p_dec)
+                    decrypted_text = decrypt_with_shared_key(cipher_list, shared_key_b, p_dec)
                     st.balloons()
                     st.success("Хабарлама сәтті дешифрланды!")
                     st.subheader("Түпнұсқа мәтін:")
-                    st.success(f"**{''.join(decrypted_chars)}**")
+                    st.success(f"**{decrypted_text}**")
                 else:
                     st.error("Массив бос!")
             except Exception as e:
@@ -211,9 +264,9 @@ with tab3:
     with col1:
         st.subheader("📚 RSA Теориясы")
         st.markdown("""
-        * **Ашық кілт:** Шифрлау үшін, бәріне ортақ.
-        * **Жабық кілт:** Дешифрлау үшін, тек сізде қалады.
-        * **Математикасы:** Үлкен жай сандарды көбейту оңай, ал кері жіктеу (факторизация) қиын.
+- **Ашық кілт:** Шифрлау үшін, бәріне ортақ.
+- **Жабық кілт:** Дешифрлау үшін, тек сізде қалады.
+- **Математикасы:** Үлкен жай сандарды көбейту оңай, ал кері жіктеу (факторизация) қиын.
         """)
     with col2:
         st.subheader("🛡️ Пароль Беріктігін Талдау")
