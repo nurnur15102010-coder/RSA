@@ -198,9 +198,15 @@ else:
     n_val = st.sidebar.number_input("Модуль (n):", value=3233, step=1)
 
 # ---------------------------------------------------------
-# Main Tabs Layout (4 вкладка)
+# Main Tabs Layout (5 вкладка)
 # ---------------------------------------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["🔒 Шифрлау", "🔓 Дешифрлау", "📚 Теория & Пароль", "🧮 Жай санды тестілеу"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🔒 Шифрлау",
+    "🔓 Дешифрлау",
+    "📚 Теория & Пароль",
+    "🧮 Жай санды тестілеу",
+    "📐 Қалдықты есептеу"
+])
 
 with tab1:
     st.header("🔒 Мәтінді ортақ құпия кілт арқылы шифрлау")
@@ -314,3 +320,40 @@ with tab4:
     }
     df = pd.DataFrame(comparison_data)
     st.table(df)
+
+with tab5:
+    st.header("📐 Қалдықты есептеу (Модульдік арифметика)")
+    st.write("Мұнда дәрежелеу қалдығын $(g^x \\bmod p)$ немесе жай бөлу қалдығын $(a \\bmod p)$ оңай есептеуге болады.")
+
+    calc_mode = st.radio(
+        "Есептеу түрін таңдаңыз:",
+        ("Дәрежелеу қалдығы: (g^x) mod p", "Жай бөлу қалдығы: a mod p"),
+        horizontal=True
+    )
+
+    if calc_mode == "Дәрежелеу қалдығы: (g^x) mod p":
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            g_val = st.number_input("Негіз (g):", min_value=0, value=5, step=1, key="rem_g")
+        with col2:
+            x_val = st.number_input("Дәреже (x):", min_value=0, value=123, step=1, key="rem_x")
+        with col3:
+            p_val = st.number_input("Модуль (p):", min_value=1, value=104729, step=1, key="rem_p")
+
+        if st.button("Қалдықты есептеу", key="btn_pow_mod"):
+            remainder = pow(int(g_val), int(x_val), int(p_val))
+            st.success(f"Нәтиже (қалдық): **({int(g_val)}^{int(x_val)}) mod {int(p_val)} = {remainder}**")
+            st.caption(f"Python формуласы: `pow({int(g_val)}, {int(x_val)}, {int(p_val)})` -> `{remainder}`")
+
+    else:
+        col1, col2 = st.columns(2)
+        with col1:
+            a_val = st.number_input("Бөлінетін сан (a):", value=125, step=1, key="rem_a")
+        with col2:
+            m_val = st.number_input("Бөлгіш / модуль (m):", min_value=1, value=23, step=1, key="rem_m")
+
+        if st.button("Қалдықты табу", key="btn_simple_mod"):
+            quotient = int(a_val) // int(m_val)
+            remainder = int(a_val) % int(m_val)
+            st.success(f"Нәтиже (қалдық): **{int(a_val)} mod {int(m_val)} = {remainder}**")
+            st.info(f"Тексеру: `{int(a_val)} = {quotient} × {int(m_val)} + {remainder}` (бүтін бөлігі: `{quotient}`, қалдық: `{remainder}`)")
